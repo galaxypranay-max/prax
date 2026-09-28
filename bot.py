@@ -180,6 +180,7 @@ def build_json_file(number, data):
             "number": number,
             "total_records": len(records),
             "data": records,
+            "dev": "Pranay(PraX)",
         },
         ensure_ascii=False,
         indent=2,
@@ -205,8 +206,7 @@ def number_kb(number):
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = (
         "💀 <b>" + BOT_NAME + "</b>\n\n"
-        "Send 10-digit mobile number → poora data milega.\n"
-        "Example: <code>9876543210</code>\n\n"
+        "Send 10-digit mobile number → Only Indian Number .\n\n"
         "Commands:\n"
         "/json &lt;number&gt;  — raw JSON\n"
         "/num &lt;number&gt;   — formatted info"
