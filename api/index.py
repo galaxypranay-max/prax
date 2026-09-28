@@ -1,104 +1,52 @@
-#!/usr/bin/env python3
-# Vercel Serverless Function for Telegram Bot Webhook
-# This adapts the polling-based bot to work on Vercel's serverless platform
-
 import os
 import sys
-import json
-import logging
-import asyncio
-
-# Add parent directory to path so we can import from bot.py
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+import asyncio
+import json
+from flask import Flask, request, jsonify
 from telegram import Update
-from telegram.ext import Application, ContextTypes
+from telegram.ext import Application, CommandHandler, MessageHandler, CallbackQueryHandler, filters
 
-# Import all components from bot.py
+# Import handlers from bot.py
 from bot import (
-    get_number_info,
-    clean_data,
-    extract_records,
-    dedupe,
-    prettify,
-    build_json_file,
-    split_msg,
-    number_kb,
-    start,
-    help_cmd,
-    about,
-    json_cmd,
-    num_cmd,
-    handle_number,
-    on_cb,
-    _handle,
-    BOT_TOKEN,
-    BOT_NAME,
+    get_number_info, clean_data, extract_records, dedupe, 
+    prettify, build_json_file, split_msg, number_kb,
+    start, help_cmd, about, json_cmd, num_cmd, 
+    handle_number, on_cb, _handle,
+    BOT_TOKEN, BOT_NAME, API_URL
 )
 
-logging.basicConfig(level=logging.INFO)
-log = logging.getLogger(BOT_NAME)
+app = Flask(__name__)
 
-# Store the application instance globally
-_app_instance = None
+async def setup_bot():
+    bot_app = Application.builder().token(BOT_TOKEN).build()
+    bot_app.add_handler(CommandHandler("start", start))
+    bot_app.add_handler(CommandHandler("help", help_cmd))
+    bot_app.add_handler(CommandHandler("about", about))
+    bot_app.add_handler(CommandHandler("json", json_cmd))
+    bot_app.add_handler(CommandHandler("num", num_cmd))
+    bot_app.add_handler(CallbackQueryHandler(on_cb))
+    bot_app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_number))
+    return bot_app
 
-def get_app():
-    """Create or return cached application instance."""
-    global _app_instance
-    if _app_instance is None:
-        _app_instance = Application.builder().token(BOT_TOKEN).build()
-
-        # Register all handlers
-        from telegram.ext import CommandHandler, MessageHandler, CallbackQueryHandler, filters
-
-        _app_instance.add_handler(CommandHandler("start", start))
-        _app_instance.add_handler(CommandHandler("help", help_cmd))
-        _app_instance.add_handler(CommandHandler("about", about))
-        _app_instance.add_handler(CommandHandler("json", json_cmd))
-        _app_instance.add_handler(CommandHandler("num", num_cmd))
-        _app_instance.add_handler(CallbackQueryHandler(on_cb))
-        _app_instance.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_number))
-
-    return _app_instance
-
-async def set_webhook_async():
-    """Set the webhook URL for the bot."""
-    webhook_url = os.environ.get("WEBHOOK_URL")
-    if webhook_url:
-        app = get_app()
-        try:
-            await app.bot.set_webhook(url=webhook_url)
-            log.info(f"Webhook set to: {webhook_url}")
-        except Exception as e:
-            log.error(f"Failed to set webhook: {e}")
-
-def handler(event, context=None):
-    """Vercel serverless function handler for Telegram webhook updates."""
+@app.route('/', methods=['POST'])
+def webhook():
     try:
-        # Parse the incoming event body
-        body = event.get('body', '{}')
-        if isinstance(body, str):
-            body = json.loads(body)
-
-        # Create telegram Update object
-        update = Update.de_json(body, None)
-
-        # Process the update
-        app = get_app()
+        update_data = request.get_json()
+        
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
-        try:
-            loop.run_until_complete(app.process_update(update))
-        finally:
-            loop.close()
-
-        return {"statusCode": 200, "body": "OK"}
+        
+        bot_app = loop.run_until_complete(setup_bot())
+        tg_update = Update.de_json(update_data, bot_app.bot)
+        loop.run_until_complete(bot_app.process_update(tg_update))
+        
+        loop.close()
+        return jsonify({'status': 'ok'})
     except Exception as e:
-        log.error(f"Webhook handler error: {e}")
-        return {"statusCode": 200, "body": "OK"}  # Always return 200 to Telegram
+        print(f"Webhook error: {e}")
+        return jsonify({'status': 'error'}), 500
 
-# Setup webhook on module import (Vercel runs this when the function is first called)
-try:
-    asyncio.run(set_webhook_async())
-except Exception as e:
-    log.warning(f"Auto webhook setup failed (manual setup needed): {e}")
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 8080)))
