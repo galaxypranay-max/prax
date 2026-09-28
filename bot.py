@@ -18,11 +18,8 @@ from telegram.ext import (
 )
 
 # ===== CONFIG — env variables se =====
-BOT_TOKEN = os.environ.get("8754893576:AAGNHqs9GWurMmYXGrCKhZsIPJVnbiTB3Nk")
-API_URL   = os.environ.get(
-    "API_URL",
-    "https://astha-9vd8.onrender.com/tapi-3a74390dd9a68a862b9d697124bb9e04",
-)
+BOT_TOKEN = os.environ.get("BOT_TOKEN")
+API_URL   = os.environ.get("API_URL")
 BOT_NAME  = os.environ.get("BOT_NAME", "PraX OSINT")
 # =====================================
 
