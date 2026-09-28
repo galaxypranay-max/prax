@@ -1,0 +1,21 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "api/index.py",
+      "use": "python3.10"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/api/(.*)",
+      "dest": "/api/index.py"
+    }
+  ],
+  "env": {
+    "BOT_TOKEN": "@bot_token",
+    "API_URL": "https://astha-9vd8.onrender.com/tapi-3a74390dd9a68a862b9d697124bb9e04",
+    "BOT_NAME": "PraX OSINT",
+    "WEBHOOK_URL": "@webhook_url"
+  }
+}
